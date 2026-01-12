@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+/**
+ * Middleware to protect routes: Verifies JWT token from headers or cookies
+ * and attaches the current user to the request object.
+ */
 const protect = async (req, res, next) => {
+
     try {
         let token;
 
@@ -45,7 +50,12 @@ const protect = async (req, res, next) => {
 };
 
 // Role-based access control
+/**
+ * Middleware to restrict access based on user roles (e.g., 'Admin')
+ * @param  {...string} roles - Allowed roles
+ */
 const restrictTo = (...roles) => {
+
     return (req, res, next) => {
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({

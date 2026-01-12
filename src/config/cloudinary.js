@@ -8,7 +8,14 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+/**
+ * Cloudinary Storage Configuration
+ * Handles logic for different file types:
+ * - Images go to 'bookworm/covers'
+ * - PDFs go to 'bookworm/books' (as raw resources)
+ */
 const storage = new CloudinaryStorage({
+
     cloudinary: cloudinary,
     params: async (req, file) => {
         let folder = 'bookworm/others';

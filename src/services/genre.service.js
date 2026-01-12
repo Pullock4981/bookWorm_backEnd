@@ -1,6 +1,15 @@
 const Genre = require('../models/Genre');
 
+/**
+ * Logic for Genre Operations
+ */
+
+/**
+ * Creates a new genre if it doesn't already exist
+ * @param {string} name 
+ */
 const createGenre = async (name) => {
+
     const genreExists = await Genre.findOne({ name });
     if (genreExists) {
         throw new Error('Genre already exists');
