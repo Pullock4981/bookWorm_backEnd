@@ -24,6 +24,7 @@ const reviewRoutes = require('./routes/review.route');
 const libraryRoutes = require('./routes/library.route');
 const recommendationRoutes = require('./routes/recommendation.route');
 const statsRoutes = require('./routes/stats.route');
+const socialRoutes = require('./routes/social.route');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/genres', genreRoutes);
@@ -33,6 +34,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/social', socialRoutes);
+
 
 
 
