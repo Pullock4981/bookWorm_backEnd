@@ -57,7 +57,11 @@ const protect = async (req, res, next) => {
 const restrictTo = (...roles) => {
 
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        // Convert user role and allowed roles to lowercase for comparison
+        const userRole = req.user.role.toLowerCase();
+        const allowedRoles = roles.map(role => role.toLowerCase());
+
+        if (!allowedRoles.includes(userRole)) {
             return res.status(403).json({
                 status: 'fail',
                 message: 'You do not have permission to perform this action'

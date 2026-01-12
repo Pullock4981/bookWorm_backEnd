@@ -1,6 +1,6 @@
 const express = require('express');
 const statsController = require('../controllers/stats.controller');
-const { protect } = require('../middlewares/auth');
+const { protect, restrictTo } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -9,5 +9,6 @@ router.use(protect);
 
 router.get('/me', statsController.getMyStats);
 router.post('/goal', statsController.updateGoal);
+router.get('/admin', restrictTo('Admin'), statsController.getAdminStats);
 
 module.exports = router;

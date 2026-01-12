@@ -1,6 +1,8 @@
 const Library = require('../models/Library');
 const Goal = require('../models/Goal');
 const Review = require('../models/Review');
+const User = require('../models/User');
+const Book = require('../models/Book');
 
 /**
  * Service to calculate and retrieve user reading statistics
@@ -85,7 +87,27 @@ const setGoal = async (userId, targetCount) => {
     );
 };
 
+/**
+ * Retrieves system-wide statistics for the Admin Dashboard
+ */
+const getAdminStats = async () => {
+    const totalUsers = await User.countDocuments();
+    const activeBooks = await Book.countDocuments();
+    const pendingReviews = await Review.countDocuments({ status: 'Pending' });
+
+    // Mock system health for now, can be expanded to check DB/Redis latency
+    const systemHealth = '98%';
+
+    return {
+        totalUsers,
+        activeBooks,
+        pendingReviews,
+        systemHealth
+    };
+};
+
 module.exports = {
     getUserStats,
-    setGoal
+    setGoal,
+    getAdminStats
 };

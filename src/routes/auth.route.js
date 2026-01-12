@@ -12,5 +12,6 @@ const router = express.Router();
 router.post('/register', upload.single('photo'), validate(registerSchema), authController.register);
 router.post('/login', validate(loginSchema), authController.login);
 router.get('/me', protect, authController.getMe);
+router.get('/logout', authController.logout);
 
 module.exports = router;

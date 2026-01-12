@@ -55,12 +55,11 @@ const bookSchema = new mongoose.Schema({
 /**
  * Query Middleware: Automatically populate the genre name when fetching books
  */
-bookSchema.pre(/^find/, function (next) {
+bookSchema.pre(/^find/, function () {
     this.populate({
         path: 'genre',
         select: 'name'
     });
-    next();
 });
 
 const Book = mongoose.model('Book', bookSchema);

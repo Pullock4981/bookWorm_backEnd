@@ -43,7 +43,26 @@ const updateGoal = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves admin dashboard statistics
+ */
+const getAdminStats = async (req, res) => {
+    try {
+        const stats = await statsService.getAdminStats();
+        res.status(200).json({
+            status: 'success',
+            data: stats
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getMyStats,
-    updateGoal
+    updateGoal,
+    getAdminStats
 };
