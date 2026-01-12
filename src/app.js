@@ -17,8 +17,11 @@ app.use(morgan('dev'));
 
 // Routes
 const authRoutes = require('./routes/auth.route');
+const genreRoutes = require('./routes/genre.route');
 
 app.use('/api/auth', authRoutes);
+app.use('/api/genres', genreRoutes);
+
 
 // Basic Route
 app.get('/', (req, res) => {
