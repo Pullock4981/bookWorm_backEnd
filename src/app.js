@@ -19,10 +19,13 @@ app.use(morgan('dev'));
 const authRoutes = require('./routes/auth.route');
 const genreRoutes = require('./routes/genre.route');
 const bookRoutes = require('./routes/book.route');
+const userRoutes = require('./routes/user.route');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/genres', genreRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/admin/users', userRoutes);
+
 
 
 
