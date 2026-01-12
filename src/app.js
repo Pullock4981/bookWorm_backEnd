@@ -55,6 +55,7 @@ app.get('/', (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
+    console.error('ERROR 💥:', err);
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode).json({
         message: err.message,

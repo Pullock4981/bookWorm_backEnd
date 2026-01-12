@@ -1,5 +1,6 @@
 const validate = (schema) => (req, res, next) => {
     try {
+        console.log('Incoming Body:', req.body);
         schema.parse({
             body: req.body,
             query: req.query,
@@ -7,6 +8,7 @@ const validate = (schema) => (req, res, next) => {
         });
         next();
     } catch (error) {
+        console.error('Validation Error:', error.errors);
         return res.status(400).json({
             status: 'fail',
             errors: error.errors.map(err => ({
