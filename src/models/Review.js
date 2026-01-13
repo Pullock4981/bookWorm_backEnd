@@ -42,12 +42,11 @@ reviewSchema.index({ book: 1, user: 1 }, { unique: true });
 /**
  * Query Middleware: Automatically populate user information
  */
-reviewSchema.pre(/^find/, function (next) {
+reviewSchema.pre(/^find/, function () {
     this.populate({
         path: 'user',
         select: 'name photo'
     });
-    next();
 });
 
 /**
