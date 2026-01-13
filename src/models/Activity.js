@@ -8,7 +8,7 @@ const activitySchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['ADD_TO_READ', 'RATED_BOOK', 'FINISHED_BOOK'],
+        enum: ['ADD_TO_READ', 'RATED_BOOK', 'FINISHED_BOOK', 'PROGRESS_LOGGED'],
         required: true
     },
     book: {

@@ -59,7 +59,13 @@ const updateProgress = async (userId, bookId, pagesRead, totalPages) => {
     }
 
     const wasFinished = entry.pagesRead === entry.totalPages && entry.totalPages > 0;
+    const previousPagesRead = entry.pagesRead;
     entry.pagesRead = pagesRead;
+
+    // Track Activity: Progress Logged (only if pages changed)
+    if (pagesRead !== previousPagesRead) {
+        await socialService.createActivity(userId, 'PROGRESS_LOGGED', bookId, { pagesRead });
+    }
 
     // Auto-move to "Read" if pagesRead matches totalPages
     if (entry.totalPages > 0 && pagesRead >= entry.totalPages) {
