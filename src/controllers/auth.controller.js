@@ -12,7 +12,10 @@ const sendTokenResponse = (result, statusCode, res) => {
 
     res.status(statusCode).cookie('token', token, cookieOptions).json({
         status: 'success',
-        data: userData
+        data: {
+            ...userData,
+            token // Include token in body for cross-domain support
+        }
     });
 };
 
