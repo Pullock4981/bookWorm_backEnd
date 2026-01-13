@@ -1,0 +1,3 @@
+Type: upload
+Resource Type: image
+Secure URL: https://res.cloudinary.com/dj7h7pw1t/image/upload/v1768302632/bookworm/books/1768302628443-43cb27_198a33a6a36747959a2f685fe3df4335.pdf

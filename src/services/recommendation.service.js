@@ -1,79 +1,147 @@
 const Library = require('../models/Library');
 const Book = require('../models/Book');
+const mongoose = require('mongoose');
 
 /**
  * Service to handle Personalized Book Recommendations logic
+ * Following strict business requirements for deterministic and high-quality results.
  */
 
 /**
- * Generates book recommendations based on the user's reading history
+ * Generates book recommendations based on the user's "Read" history
  * @param {string} userId - The unique ID of the user
  */
 const getPersonalizedRecommendations = async (userId) => {
-    // 1. Get user's reading history (Read and Currently Reading books)
-    const userLibrary = await Library.find({ user: userId }).populate('book');
-    const libraryBookIds = userLibrary.map(item => item.book._id.toString());
+    // 1. Get user's full library
+    // The Library model has a pre-find hook that populates 'book'
+    const userLibrary = await Library.find({ user: userId });
 
-    // 2. Analyze favorite genres
-    const relevantBooks = userLibrary.filter(item =>
-        ['Read', 'Currently Reading'].includes(item.shelf)
-    );
+    // Safety check: extract actual IDs even if populated
+    const allAddedBookIds = userLibrary
+        .map(item => item.book && item.book._id ? item.book._id.toString() : item.book?.toString())
+        .filter(id => id && mongoose.Types.ObjectId.isValid(id));
 
-    const genreFrequency = {};
-    relevantBooks.forEach(item => {
-        const genreId = item.book.genre._id.toString();
-        const genreName = item.book.genre.name;
-        if (!genreFrequency[genreId]) {
-            genreFrequency[genreId] = { count: 0, name: genreName };
-        }
-        genreFrequency[genreId].count += 1;
+    // 2. Analyze user preferences from "Read" and "Currently Reading" shelves
+    // This allows the system to be more proactive for users who just started
+    const preferredBooks = await Library.find({
+        user: userId,
+        shelf: { $in: ['Read', 'Currently Reading'] }
+    }).populate({
+        path: 'book',
+        populate: { path: 'genre' }
     });
 
-    // Sort genres by frequency to find top interests
-    const sortedGenres = Object.entries(genreFrequency)
+    // --- CASE A: FALLBACK / NEW USER (Less than 3 preferred books) ---
+    if (preferredBooks.length < 3) {
+        const topPopular = await Book.find({
+            _id: { $nin: allAddedBookIds }
+        })
+            .sort({ averageRating: -1, totalReviews: -1 })
+            .limit(10)
+            .populate('genre');
+
+        const randomBooks = await Book.aggregate([
+            { $match: { _id: { $nin: allAddedBookIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+            { $sample: { size: 8 } },
+            {
+                $lookup: {
+                    from: 'genres',
+                    localField: 'genre',
+                    foreignField: '_id',
+                    as: 'genre'
+                }
+            },
+            { $unwind: '$genre' }
+        ]);
+
+        const merged = [
+            ...topPopular.map(b => ({
+                ...b.toObject(),
+                recommendationReason: "Highly rated by the BookWorm community"
+            })),
+            ...randomBooks.map(b => ({
+                ...b,
+                recommendationReason: "Discover something new and exciting"
+            }))
+        ];
+
+        // Unique filter by ID
+        const unique = [];
+        const seen = new Set();
+        for (const item of merged) {
+            const idStr = item._id.toString();
+            if (!seen.has(idStr)) {
+                seen.add(idStr);
+                unique.push(item);
+            }
+        }
+
+        return unique.slice(0, 18);
+    }
+
+    // --- CASE B: PERSONALIZED (>= 3 preferred books) ---
+
+    // Build genre statistics
+    const genreStats = {};
+    preferredBooks.forEach(item => {
+        if (!item.book || !item.book.genre) return;
+        const g = item.book.genre;
+        const gId = g._id.toString();
+        if (!genreStats[gId]) {
+            genreStats[gId] = { name: g.name, count: 0 };
+        }
+        genreStats[gId].count += 1;
+    });
+
+    // Top 2 favorite genres
+    const topGenres = Object.entries(genreStats)
         .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 3); // Get top 3 genres
+        .slice(0, 2);
 
-    const favoriteGenreIds = sortedGenres.map(([id]) => id);
+    const targetGenreIds = topGenres.map(([id]) => id);
 
-    // 3. Find recommended books in those genres that the user hasn't added yet
-    let recommendations = [];
+    // Fetch genre-matched recommendations
+    const recommendedBooks = await Book.find({
+        genre: { $in: targetGenreIds },
+        _id: { $nin: allAddedBookIds },
+        averageRating: { $gte: 3.5 } // Slightly lower threshold to ensure more results
+    })
+        .sort({ averageRating: -1, totalReviews: -1 })
+        .limit(18)
+        .populate('genre');
 
-    if (favoriteGenreIds.length > 0) {
-        recommendations = await Book.find({
-            genre: { $in: favoriteGenreIds },
-            _id: { $not: { $in: libraryBookIds } }
+    const personalized = recommendedBooks.map(book => {
+        const genreId = book.genre._id.toString();
+        const stat = genreStats[genreId];
+        return {
+            ...book.toObject(),
+            recommendationReason: stat
+                ? `Matches your interest in ${stat.name} (${stat.count} books)`
+                : "A high-rated choice based on your profile"
+        };
+    });
+
+    // Supplement if needed
+    if (personalized.length < 12) {
+        const currentIds = personalized.map(b => b._id.toString());
+        const extraNeeded = 18 - personalized.length;
+
+        const generalSupplements = await Book.find({
+            _id: { $nin: [...allAddedBookIds, ...currentIds] }
         })
-            .sort('-averageRating -totalReviews')
-            .limit(15);
+            .sort({ averageRating: -1, totalReviews: -1 })
+            .limit(extraNeeded)
+            .populate('genre');
 
-        // Add a "Recommendation Reason" to each book
-        recommendations = recommendations.map(book => {
-            const genreInfo = genreFrequency[book.genre._id.toString()];
-            const bookObj = book.toObject();
-            bookObj.recommendationReason = `Based on your interest in ${genreInfo ? genreInfo.name : 'similar books'}`;
-            return bookObj;
-        });
+        const supplemental = generalSupplements.map(b => ({
+            ...b.toObject(),
+            recommendationReason: "Highly recommended globally"
+        }));
+
+        return [...personalized, ...supplemental].slice(0, 18);
     }
 
-    // 4. Fallback: If no history or not enough recommendations, add generally popular books
-    if (recommendations.length < 5) {
-        const popularBooks = await Book.find({
-            _id: { $not: { $in: [...libraryBookIds, ...recommendations.map(r => r._id.toString())] } }
-        })
-            .sort('-averageRating -totalReviews')
-            .limit(10);
-
-        const popularWithReason = popularBooks.map(book => {
-            const bookObj = book.toObject();
-            bookObj.recommendationReason = `Popular choice with ${book.averageRating.toFixed(1)} rating`;
-            return bookObj;
-        });
-
-        recommendations = [...recommendations, ...popularWithReason];
-    }
-
-    return recommendations.slice(0, 15);
+    return personalized;
 };
 
 module.exports = {

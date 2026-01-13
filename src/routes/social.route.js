@@ -10,5 +10,7 @@ router.use(protect);
 router.post('/follow/:id', socialController.followUser);
 router.post('/unfollow/:id', socialController.unfollowUser);
 router.get('/feed', socialController.getFeed);
+router.get('/users-to-follow', socialController.getSuggestedUsers);
+router.get('/following', socialController.getFollowing);
 
 module.exports = router;

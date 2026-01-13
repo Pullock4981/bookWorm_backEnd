@@ -1,4 +1,5 @@
 const Review = require('../models/Review');
+const socialService = require('./social.service');
 
 /**
  * Service to handle Book Reviews business logic
@@ -32,6 +33,10 @@ const approveReview = async (id) => {
         { new: true, runValidators: true }
     );
     if (!review) throw new Error('Review not found');
+
+    // Track Activity: User rates a book (only after review is approved)
+    await socialService.createActivity(review.user, 'RATED_BOOK', review.book, { rating: review.rating });
+
     return review;
 };
 

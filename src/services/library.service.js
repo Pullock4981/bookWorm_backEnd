@@ -1,5 +1,6 @@
 const Library = require('../models/Library');
 const Book = require('../models/Book');
+const socialService = require('./social.service');
 
 /**
  * Service to handle Library & Reading Tracker business logic
@@ -24,6 +25,11 @@ const addToLibrary = async (userId, bookId, shelf) => {
         { upsert: true, new: true, runValidators: true }
     );
 
+    // Track Activity: User adds a book to the "Read" shelf
+    if (shelf === 'Read') {
+        await socialService.createActivity(userId, 'ADD_TO_READ', bookId);
+    }
+
     return libraryEntry;
 };
 
@@ -45,11 +51,17 @@ const updateProgress = async (userId, bookId, pagesRead) => {
         throw new Error('Pages read cannot exceed total pages');
     }
 
+    const wasFinished = entry.pagesRead === entry.totalPages && entry.totalPages > 0;
     entry.pagesRead = pagesRead;
 
     // Auto-move to "Read" if pagesRead matches totalPages
     if (entry.totalPages > 0 && pagesRead === entry.totalPages) {
         entry.shelf = 'Read';
+
+        // Track Activity: User finishes reading a book
+        if (!wasFinished) {
+            await socialService.createActivity(userId, 'FINISHED_BOOK', bookId);
+        }
     } else if (pagesRead > 0 && entry.shelf === 'Want to Read') {
         // Auto-move to "Currently Reading" if user starts reading
         entry.shelf = 'Currently Reading';

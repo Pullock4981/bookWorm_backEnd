@@ -1,0 +1,58 @@
+[dotenv@17.2.3] injecting env (8) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[
+  {
+    "id": "6965600106319896e829b7c1",
+    "title": "my book",
+    "pdfUrl": "https://res.cloudinary.com/dj7h7pw1t/raw/upload/v1768251393/bookworm/books/1768251391796-Ashik-cv_FullStack_Developer"
+  },
+  {
+    "id": "6965624b347cc6aae0c3c8f7",
+    "title": "The Great Gatsby",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "6965624b347cc6aae0c3c8fa",
+    "title": "Dune",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "6965624b347cc6aae0c3c8fd",
+    "title": "Sapiens: A Brief History of Humankind",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "6965624b347cc6aae0c3c900",
+    "title": "Atomic Habits",
+    "pdfUrl": "https://res.cloudinary.com/dj7h7pw1t/image/upload/v1768302632/bookworm/books/1768302628443-43cb27_198a33a6a36747959a2f685fe3df4335.pdf"
+  },
+  {
+    "id": "69660c7544b6ca74ea4c77cc",
+    "title": "The Silent Patient",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "69660c9a6b167d80c94c76c4",
+    "title": "Thinking, Fast and Slow",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "69660c9b6b167d80c94c76d1",
+    "title": "The Hobbit",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "69660c9b6b167d80c94c76de",
+    "title": "Meditations",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "69660c9c6b167d80c94c76eb",
+    "title": "Steve Jobs",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  {
+    "id": "69660c9d6b167d80c94c76f8",
+    "title": "Factfulness",
+    "pdfUrl": "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  }
+]

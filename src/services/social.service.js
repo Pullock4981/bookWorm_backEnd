@@ -1,96 +1,139 @@
+const Follow = require('../models/Follow');
+const Activity = require('../models/Activity');
 const User = require('../models/User');
-const Library = require('../models/Library');
-const Review = require('../models/Review');
 
 /**
- * Service to handle Social interactions and Activity feed
+ * Business Rule: A user can follow another user
+ * Prevent duplicate follow records via unique index in Schema
  */
-
-/**
- * Logic to follow another user
- * @param {string} followerId - ID of the user who is following
- * @param {string} followedId - ID of the user being followed
- */
-const followUser = async (followerId, followedId) => {
-    if (followerId.toString() === followedId.toString()) {
+const followUser = async (followerId, followingId) => {
+    if (followerId.toString() === followingId.toString()) {
         throw new Error('You cannot follow yourself');
     }
 
-    const user = await User.findById(followerId);
-    if (user.following.includes(followedId)) {
+    // Check if already following
+    const existingFollow = await Follow.findOne({ follower: followerId, following: followingId });
+    if (existingFollow) {
         throw new Error('Already following this user');
     }
 
-    user.following.push(followedId);
-    await user.save();
-    return user;
+    // Check if followingId exists
+    const followingUser = await User.findById(followingId);
+    if (!followingUser) throw new Error('User not found');
+
+    const follow = await Follow.create({
+        follower: followerId,
+        following: followingId
+    });
+
+    return follow;
 };
 
 /**
- * Logic to unfollow a user
+ * Business Rule: A user can unfollow another user
  */
-const unfollowUser = async (followerId, followedId) => {
-    const user = await User.findById(followerId);
-    user.following = user.following.filter(id => id.toString() !== followedId.toString());
-    await user.save();
-    return user;
+const unfollowUser = async (followerId, followingId) => {
+    const result = await Follow.findOneAndDelete({
+        follower: followerId,
+        following: followingId
+    });
+
+    if (!result) throw new Error('You are not following this user');
+    return result;
 };
 
 /**
- * Generates an activity feed based on users being followed
- * @param {string} userId - Current user ID
+ * Internal helper to track meaningful user activities
+ */
+const createActivity = async (userId, type, bookId, data = {}) => {
+    try {
+        await Activity.create({
+            user: userId,
+            type,
+            book: bookId,
+            data
+        });
+    } catch (err) {
+        console.error('Activity creation failed:', err.message);
+        // Silently fail as this shouldn't block the main process
+    }
+};
+
+/**
+ * Activity Feed Logic:
+ * - Fetch followings -> Fetch activities -> Limit to 20-30 -> Skip if book deleted
  */
 const getActivityFeed = async (userId) => {
-    const user = await User.findById(userId);
-    const followingIds = user.following;
+    // 1. Get the list of users the logged-in user is following
+    const followings = await Follow.find({ follower: userId }).select('following');
+    const followingIds = followings.map(f => f.following);
 
-    // If following no one, show global feed
-    const query = followingIds.length > 0 ? { user: { $in: followingIds } } : {};
+    if (followingIds.length === 0) return [];
 
-    // 1. Fetch recent library updates
-    const libraryActivities = await Library.find(query)
-        .sort('-updatedAt')
-        .limit(10)
-        .populate('user', 'name photo')
-        .populate('book', 'title coverImage');
-
-    // 2. Fetch recent approved reviews
-    const reviewQuery = followingIds.length > 0
-        ? { user: { $in: followingIds }, status: 'Approved' }
-        : { status: 'Approved' };
-
-    const reviewActivities = await Review.find(reviewQuery)
+    // 2. Fetch recent activities from those users only
+    const activities = await Activity.find({ user: { $in: followingIds } })
         .sort('-createdAt')
-        .limit(10)
+        .limit(30)
         .populate('user', 'name photo')
         .populate('book', 'title coverImage');
 
-    // 3. Combine and Format activities
-    const activities = [
-        ...libraryActivities.map(item => ({
-            type: 'library',
-            user: item.user,
-            book: item.book,
-            shelf: item.shelf,
-            timestamp: item.updatedAt,
-            message: `${item.user.name} added "${item.book.title}" to ${item.shelf} shelf`
-        })),
-        ...reviewActivities.map(item => ({
-            type: 'review',
-            user: item.user,
-            book: item.book,
-            rating: item.rating,
-            timestamp: item.createdAt,
-            message: `${item.user.name} rated "${item.book.title}" ${item.rating} stars`
-        }))
-    ];
+    // 3. Skip activities if the related book no longer exists (filtered by populate)
+    // 4. Return formatted feed
+    return activities
+        .filter(act => act.book && act.user) // Filter out deleted books or users
+        .map(act => {
+            // Determine shelf for display
+            let shelf = undefined;
+            if (act.type === 'ADD_TO_READ') shelf = 'Read';
+            if (act.type === 'FINISHED_BOOK') shelf = 'Read';
 
-    // Sort combined feed by latest timestamp
-    return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
+            return {
+                id: act._id,
+                user: act.user,
+                book: act.book,
+                type: act.type === 'RATED_BOOK' ? 'review' : 'shelf_update', // Map to frontend types
+                shelf: shelf,
+                rating: act.data?.rating,
+                timestamp: act.createdAt
+            };
+        });
+};
+
+/**
+ * Suggests users to follow
+ * Logic: Find users who are NOT followed by current user
+ */
+const getSuggestedUsers = async (userId) => {
+    // 1. Get list of users already followed
+    const followings = await Follow.find({ follower: userId }).select('following');
+    const followingIds = followings.map(f => f.following);
+
+    // 2. Add current user to exclusion list
+    followingIds.push(userId);
+
+    // 3. Find users NOT in this list
+    const suggestions = await User.find({ _id: { $nin: followingIds }, role: 'User' })
+        .limit(5)
+        .select('name photo role'); // Only needed fields
+
+    return suggestions;
+};
+
+/**
+ * Fetches list of users the current user is following
+ */
+const getFollowing = async (userId) => {
+    const followings = await Follow.find({ follower: userId })
+        .populate('following', 'name photo role');
+
+    return followings.map(f => f.following);
 };
 
 module.exports = {
     followUser,
     unfollowUser,
-    getActivityFeed
+    createActivity,
+    getActivityFeed,
+    getSuggestedUsers,
+    getFollowing
 };

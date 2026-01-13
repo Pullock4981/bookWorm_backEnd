@@ -12,8 +12,7 @@ const followUser = async (req, res) => {
         const user = await socialService.followUser(req.user._id, req.params.id);
         res.status(200).json({
             status: 'success',
-            message: 'User followed successfully',
-            data: { following: user.following }
+            message: 'User followed successfully'
         });
     } catch (error) {
         res.status(400).json({
@@ -31,8 +30,7 @@ const unfollowUser = async (req, res) => {
         const user = await socialService.unfollowUser(req.user._id, req.params.id);
         res.status(200).json({
             status: 'success',
-            message: 'User unfollowed successfully',
-            data: { following: user.following }
+            message: 'User unfollowed successfully'
         });
     } catch (error) {
         res.status(400).json({
@@ -61,8 +59,48 @@ const getFeed = async (req, res) => {
     }
 };
 
+/**
+ * Fetches users to follow
+ */
+const getSuggestedUsers = async (req, res) => {
+    try {
+        const users = await socialService.getSuggestedUsers(req.user._id);
+        res.status(200).json({
+            status: 'success',
+            results: users.length,
+            data: users
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
+/**
+ * Fetches list of users followed by current user
+ */
+const getFollowing = async (req, res) => {
+    try {
+        const following = await socialService.getFollowing(req.user._id);
+        res.status(200).json({
+            status: 'success',
+            results: following.length,
+            data: following
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     followUser,
     unfollowUser,
-    getFeed
+    getFeed,
+    getSuggestedUsers,
+    getFollowing
 };

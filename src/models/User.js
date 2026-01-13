@@ -29,12 +29,7 @@ const userSchema = new mongoose.Schema({
         enum: ['User', 'Admin'],
         default: 'User'
     },
-    following: [{
-        type: mongoose.Schema.ObjectId,
-        ref: 'User'
-    }]
 }, {
-
     timestamps: true
 });
 
