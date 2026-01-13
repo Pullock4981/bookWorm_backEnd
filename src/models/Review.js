@@ -36,8 +36,8 @@ const reviewSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Prevent duplicate reviews: One user can only review a book once
-reviewSchema.index({ book: 1, user: 1 }, { unique: true });
+// Allow multiple reviews: A user can review a book multiple times if they wish.
+reviewSchema.index({ book: 1, user: 1 }, { unique: false });
 
 /**
  * Query Middleware: Automatically populate user information

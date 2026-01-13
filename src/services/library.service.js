@@ -92,9 +92,17 @@ const removeFromLibrary = async (userId, bookId) => {
     return result;
 };
 
+/**
+ * Checks if a book is in user's library and returns the entry
+ */
+const checkBookStatus = async (userId, bookId) => {
+    return await Library.findOne({ user: userId, book: bookId });
+};
+
 module.exports = {
     addToLibrary,
     getMyLibrary,
     updateProgress,
-    removeFromLibrary
+    removeFromLibrary,
+    checkBookStatus
 };

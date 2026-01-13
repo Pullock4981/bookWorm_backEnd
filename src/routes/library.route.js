@@ -10,6 +10,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/', libraryController.getMyLibrary);
+router.get('/check/:bookId', libraryController.checkBookStatus);
 router.post('/add', validate(addToLibrarySchema), libraryController.addToLibrary);
 router.patch('/progress/:id', validate(updateProgressSchema), libraryController.updateProgress);
 router.delete('/:id', libraryController.removeFromLibrary);

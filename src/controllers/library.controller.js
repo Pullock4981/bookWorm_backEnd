@@ -80,9 +80,32 @@ const removeFromLibrary = async (req, res) => {
     }
 };
 
+/**
+ * Checks if a specific book is in user's library
+ */
+const checkBookStatus = async (req, res) => {
+    try {
+        const entry = await libraryService.checkBookStatus(req.user._id, req.params.bookId);
+        res.status(200).json({
+            status: 'success',
+            data: {
+                isInLibrary: !!entry,
+                shelf: entry ? entry.shelf : null,
+                entry: entry || null
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     addToLibrary,
     getMyLibrary,
     updateProgress,
-    removeFromLibrary
+    removeFromLibrary,
+    checkBookStatus
 };
