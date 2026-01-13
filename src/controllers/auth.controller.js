@@ -6,8 +6,8 @@ const sendTokenResponse = (result, statusCode, res) => {
     const cookieOptions = {
         expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Lax'
+        secure: true, // Always true for cross-domain cookies
+        sameSite: 'None' // Required for cross-domain
     };
 
     res.status(statusCode).cookie('token', token, cookieOptions).json({
