@@ -41,12 +41,11 @@ librarySchema.index({ user: 1, book: 1 }, { unique: true });
 /**
  * Middleware: Automatically populate book info when fetching library records
  */
-librarySchema.pre(/^find/, function (next) {
+librarySchema.pre(/^find/, function () {
     this.populate({
         path: 'book',
         select: 'title author coverImage genre totalPages averageRating'
     });
-    next();
 });
 
 const Library = mongoose.model('Library', librarySchema);

@@ -18,6 +18,14 @@ const tutorialSchema = new mongoose.Schema({
     description: {
         type: String,
         trim: true
+    },
+    thumbnailUrl: {
+        type: String,
+        trim: true
+    },
+    duration: {
+        type: String,
+        trim: true
     }
 }, {
     timestamps: true
