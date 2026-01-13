@@ -98,11 +98,79 @@ const getAdminStats = async () => {
     // Mock system health for now, can be expanded to check DB/Redis latency
     const systemHealth = '98%';
 
+    // 1. Books per Genre (for Pie/Doughnut Chart)
+    const booksByGenre = await Book.aggregate([
+        {
+            $lookup: {
+                from: 'genres',
+                localField: 'genre',
+                foreignField: '_id',
+                as: 'genreInfo'
+            }
+        },
+        { $unwind: '$genreInfo' },
+        {
+            $group: {
+                _id: '$genreInfo.name',
+                count: { $sum: 1 }
+            }
+        },
+        { $project: { name: '$_id', value: '$count', _id: 0 } },
+        { $sort: { value: -1 } },
+        { $limit: 5 } // Top 5 genres
+    ]);
+
+    // 2. User Growth (Last 6 Months) (for Bar/Area Chart)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Go back 5 months to include current month (total 6)
+    sixMonthsAgo.setDate(1); // Start from beginning of that month
+
+    const usersByMonth = await User.aggregate([
+        { $match: { createdAt: { $gte: sixMonthsAgo } } },
+        {
+            $group: {
+                _id: {
+                    month: { $month: '$createdAt' },
+                    year: { $year: '$createdAt' }
+                },
+                count: { $sum: 1 }
+            }
+        },
+        {
+            $sort: { '_id.year': 1, '_id.month': 1 }
+        }
+    ]);
+
+    // Generate last 6 months array to ensure no gaps
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const last6Months = [];
+    for (let i = 0; i < 6; i++) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (5 - i));
+        last6Months.push({
+            monthIndex: d.getMonth() + 1,
+            year: d.getFullYear(),
+            name: monthNames[d.getMonth()]
+        });
+    }
+
+    const formattedUserGrowth = last6Months.map(monthCtx => {
+        const found = usersByMonth.find(u => u._id.month === monthCtx.monthIndex && u._id.year === monthCtx.year);
+        return {
+            name: monthCtx.name,
+            users: found ? found.count : 0
+        };
+    });
+
     return {
         totalUsers,
         activeBooks,
         pendingReviews,
-        systemHealth
+        systemHealth,
+        charts: {
+            booksByGenre,
+            userGrowth: formattedUserGrowth
+        }
     };
 };
 
