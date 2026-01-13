@@ -70,7 +70,7 @@ reviewSchema.statics.calcAverageRatings = async function (bookId) {
     if (stats.length > 0) {
         await mongoose.model('Book').findByIdAndUpdate(bookId, {
             totalReviews: stats[0].nRating,
-            averageRating: stats[0].avgRating
+            averageRating: Math.round(stats[0].avgRating * 10) / 10
         });
     } else {
         await mongoose.model('Book').findByIdAndUpdate(bookId, {
