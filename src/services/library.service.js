@@ -43,20 +43,28 @@ const getMyLibrary = async (userId) => {
 /**
  * Updates reading progress for a specific book
  */
-const updateProgress = async (userId, bookId, pagesRead) => {
+const updateProgress = async (userId, bookId, pagesRead, totalPages) => {
     const entry = await Library.findOne({ user: userId, book: bookId });
     if (!entry) throw new Error('Book not found in your library');
 
+    // Update totalPages if provided (fixes issue where DB has 0 pages)
+    if (totalPages && totalPages > 0) {
+        entry.totalPages = totalPages;
+    }
+
     if (pagesRead > entry.totalPages && entry.totalPages > 0) {
-        throw new Error('Pages read cannot exceed total pages');
+        // Allow equal, but log/warn if greater? Just cap it for safety
+        // pagesRead = entry.totalPages; 
+        // User might have a different edition, but let's stick to the logic
     }
 
     const wasFinished = entry.pagesRead === entry.totalPages && entry.totalPages > 0;
     entry.pagesRead = pagesRead;
 
     // Auto-move to "Read" if pagesRead matches totalPages
-    if (entry.totalPages > 0 && pagesRead === entry.totalPages) {
+    if (entry.totalPages > 0 && pagesRead >= entry.totalPages) {
         entry.shelf = 'Read';
+        entry.pagesRead = entry.totalPages; // Ensure it matches
 
         // Track Activity: User finishes reading a book
         if (!wasFinished) {
@@ -64,6 +72,10 @@ const updateProgress = async (userId, bookId, pagesRead) => {
         }
     } else if (pagesRead > 0 && entry.shelf === 'Want to Read') {
         // Auto-move to "Currently Reading" if user starts reading
+        entry.shelf = 'Currently Reading';
+    } else if (pagesRead < entry.totalPages && entry.shelf === 'Read') {
+        // If user moves back, maybe move to Currently Reading? 
+        // Let's keep it 'Read' unless explicitly changed, or maybe move back to 'Currently Reading'
         entry.shelf = 'Currently Reading';
     }
 

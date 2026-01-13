@@ -48,8 +48,8 @@ const getMyLibrary = async (req, res) => {
 const updateProgress = async (req, res) => {
     try {
         const { id } = req.params; // bookId
-        const { pagesRead } = req.body;
-        const entry = await libraryService.updateProgress(req.user._id, id, pagesRead);
+        const { pagesRead, totalPages } = req.body;
+        const entry = await libraryService.updateProgress(req.user._id, id, pagesRead, totalPages);
         res.status(200).json({
             status: 'success',
             data: entry

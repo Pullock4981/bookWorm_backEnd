@@ -44,7 +44,7 @@ librarySchema.index({ user: 1, book: 1 }, { unique: true });
 librarySchema.pre(/^find/, function () {
     this.populate({
         path: 'book',
-        select: 'title author coverImage genre totalPages averageRating'
+        select: 'title author coverImage genre totalPages averageRating pdfUrl'
     });
 });
 
