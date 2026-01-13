@@ -10,6 +10,7 @@ const router = express.Router();
  * Public User Routes: Submit reviews (Requires login)
  */
 router.post('/', protect, validate(createReviewSchema), reviewController.createReview);
+router.get('/book/:bookId', reviewController.getBookReviews);
 
 /**
  * Admin Only Routes: Moderation

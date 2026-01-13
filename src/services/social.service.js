@@ -44,26 +44,26 @@ const getActivityFeed = async (userId) => {
     const user = await User.findById(userId);
     const followingIds = user.following;
 
-    if (followingIds.length === 0) return [];
+    // If following no one, show global feed
+    const query = followingIds.length > 0 ? { user: { $in: followingIds } } : {};
 
-    // 1. Fetch recent library updates from followed users
-    const libraryActivities = await Library.find({
-        user: { $in: followingIds }
-    })
+    // 1. Fetch recent library updates
+    const libraryActivities = await Library.find(query)
         .sort('-updatedAt')
         .limit(10)
         .populate('user', 'name photo')
-        .populate('book', 'title');
+        .populate('book', 'title coverImage');
 
-    // 2. Fetch recent approved reviews from followed users
-    const reviewActivities = await Review.find({
-        user: { $in: followingIds },
-        status: 'Approved'
-    })
+    // 2. Fetch recent approved reviews
+    const reviewQuery = followingIds.length > 0
+        ? { user: { $in: followingIds }, status: 'Approved' }
+        : { status: 'Approved' };
+
+    const reviewActivities = await Review.find(reviewQuery)
         .sort('-createdAt')
         .limit(10)
         .populate('user', 'name photo')
-        .populate('book', 'title');
+        .populate('book', 'title coverImage');
 
     // 3. Combine and Format activities
     const activities = [

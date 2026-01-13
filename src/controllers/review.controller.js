@@ -85,9 +85,29 @@ const deleteReview = async (req, res) => {
     }
 };
 
+/**
+ * Fetches all approved reviews for a specific book
+ */
+const getBookReviews = async (req, res) => {
+    try {
+        const reviews = await reviewService.getBookReviews(req.params.bookId);
+        res.status(200).json({
+            status: 'success',
+            results: reviews.length,
+            data: reviews
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     createReview,
     getPendingReviews,
     approveReview,
-    deleteReview
+    deleteReview,
+    getBookReviews
 };

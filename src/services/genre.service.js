@@ -1,4 +1,5 @@
 const Genre = require('../models/Genre');
+const Book = require('../models/Book');
 
 /**
  * Logic for Genre Operations
@@ -31,6 +32,12 @@ const updateGenre = async (id, name) => {
 };
 
 const deleteGenre = async (id) => {
+    // Check if any books are associated with this genre
+    const booksCount = await Book.countDocuments({ genre: id });
+    if (booksCount > 0) {
+        throw new Error(`Cannot delete genre. It is associated with ${booksCount} book(s).`);
+    }
+
     const genre = await Genre.findByIdAndDelete(id);
     if (!genre) throw new Error('Genre not found');
     return genre;
