@@ -37,6 +37,7 @@ app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/tutorials', tutorialRoutes);
+app.use('/api/favorites', require('./routes/favorite.route'));
 
 
 
