@@ -44,7 +44,7 @@ const checkFavoriteStatus = async (req, res) => {
         const { bookId } = req.params;
         const userId = req.user._id;
 
-        const existing = await Favorite.findOne({ user: userId, book: bookId });
+        const existing = await Favorite.findOne({ user: userId, book: bookId }).select('_id').lean();
 
         res.status(200).json({
             status: 'success',
@@ -65,7 +65,8 @@ const getMyFavorites = async (req, res) => {
     try {
         const favorites = await Favorite.find({ user: req.user._id })
             .populate('book', 'title author coverImage')
-            .sort('-createdAt');
+            .sort('-createdAt')
+            .lean();
 
         res.status(200).json({
             status: 'success',

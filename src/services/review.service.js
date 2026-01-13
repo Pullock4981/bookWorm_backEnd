@@ -18,8 +18,9 @@ const createReview = async (reviewData) => {
  */
 const getPendingReviews = async () => {
     return await Review.find({ status: 'Pending' })
-        .populate('book', 'title')
-        .populate('user', 'name');
+        .populate('book', 'title coverImage')
+        .populate('user', 'name photo')
+        .lean();
 };
 
 /**
@@ -55,7 +56,9 @@ const deleteReview = async (id) => {
  * @param {string} bookId - Book ID
  */
 const getBookReviews = async (bookId) => {
-    return await Review.find({ book: bookId, status: 'Approved' });
+    return await Review.find({ book: bookId, status: 'Approved' })
+        .populate('user', 'name photo')
+        .lean();
 };
 
 module.exports = {

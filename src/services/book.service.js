@@ -21,12 +21,15 @@ const getAllBooks = async (filter = {}, options = {}) => {
     const { sortBy = '-createdAt', limit = 10, page = 1 } = options;
     const skip = (page - 1) * limit;
 
-    const books = await Book.find(filter)
-        .sort(sortBy)
-        .limit(limit)
-        .skip(skip);
-
-    const total = await Book.countDocuments(filter);
+    // Parallelize find and count
+    const [books, total] = await Promise.all([
+        Book.find(filter)
+            .sort(sortBy)
+            .limit(limit)
+            .skip(skip)
+            .lean(),
+        Book.countDocuments(filter).lean()
+    ]);
 
     return {
         books,
@@ -41,7 +44,7 @@ const getAllBooks = async (filter = {}, options = {}) => {
  * @param {string} id - Book ID
  */
 const getBookById = async (id) => {
-    const book = await Book.findById(id);
+    const book = await Book.findById(id).lean();
     if (!book) throw new Error('Book not found');
     return book;
 };

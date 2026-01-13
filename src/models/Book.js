@@ -52,6 +52,12 @@ const bookSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
+// Indexes for performance
+bookSchema.index({ genre: 1 });
+bookSchema.index({ averageRating: -1, totalReviews: -1 });
+bookSchema.index({ createdAt: -1 });
+bookSchema.index({ title: 'text', author: 'text' });
+
 /**
  * Query Middleware: Automatically populate the genre name when fetching books
  */

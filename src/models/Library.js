@@ -37,6 +37,9 @@ const librarySchema = new mongoose.Schema({
 
 // Ensure a user can only have one library record per book
 librarySchema.index({ user: 1, book: 1 }, { unique: true });
+librarySchema.index({ user: 1, shelf: 1 });
+librarySchema.index({ shelf: 1 });
+librarySchema.index({ updatedAt: -1 });
 
 /**
  * Middleware: Automatically populate book info when fetching library records

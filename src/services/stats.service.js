@@ -15,10 +15,17 @@ const Book = require('../models/Book');
 const getUserStats = async (userId) => {
     const currentYear = new Date().getFullYear();
 
-    // 1. Get Library data
-    const libraryItems = await Library.find({ user: userId }).populate('book');
+    // 1. Parallelize fetches and use lean() for performance
+    const [libraryItems, userReviews, goal] = await Promise.all([
+        Library.find({ user: userId }).populate({
+            path: 'book',
+            select: 'genre' // Only need genre for stats
+        }).lean(),
+        Review.find({ user: userId }).select('rating').lean(),
+        Goal.findOne({ user: userId, year: currentYear }).lean()
+    ]);
 
-    // Books read THIS year (using updatedAt when shelf is 'Read')
+    // Books read THIS year
     const booksReadThisYear = libraryItems.filter(item =>
         item.shelf === 'Read' &&
         new Date(item.updatedAt).getFullYear() === currentYear
@@ -30,13 +37,12 @@ const getUserStats = async (userId) => {
     // Total books read overall
     const totalBooksRead = libraryItems.filter(item => item.shelf === 'Read').length;
 
-    // 2. Average rating given by the user
-    const userReviews = await Review.find({ user: userId });
+    // 2. Average rating given
     const avgRatingGiven = userReviews.length > 0
         ? userReviews.reduce((acc, r) => acc + r.rating, 0) / userReviews.length
         : 0;
 
-    // 3. Favorite genre breakdown (for Pie Chart)
+    // 3. Favorite genre breakdown
     const genreCounts = {};
     libraryItems.forEach(item => {
         if (item.book && item.book.genre) {
@@ -46,7 +52,7 @@ const getUserStats = async (userId) => {
     });
     const genreBreakdown = Object.entries(genreCounts).map(([name, value]) => ({ name, value }));
 
-    // 4. Monthly reading progress (for Bar Chart)
+    // 4. Monthly reading progress
     const monthlyStats = Array(12).fill(0).map((_, i) => ({
         month: new Date(0, i).toLocaleString('en', { month: 'short' }),
         count: 0
@@ -58,9 +64,6 @@ const getUserStats = async (userId) => {
             monthlyStats[monthIndex].count += 1;
         }
     });
-
-    // 5. Reading Goal
-    const goal = await Goal.findOne({ user: userId, year: currentYear });
 
     return {
         booksReadThisYear,
@@ -91,55 +94,31 @@ const setGoal = async (userId, targetCount) => {
  * Retrieves system-wide statistics for the Admin Dashboard
  */
 const getAdminStats = async () => {
-    const totalUsers = await User.countDocuments();
-    const activeBooks = await Book.countDocuments();
-    const pendingReviews = await Review.countDocuments({ status: 'Pending' });
-
-    // Mock system health for now, can be expanded to check DB/Redis latency
-    const systemHealth = '98%';
-
-    // 1. Books per Genre (for Pie/Doughnut Chart)
-    const booksByGenre = await Book.aggregate([
-        {
-            $lookup: {
-                from: 'genres',
-                localField: 'genre',
-                foreignField: '_id',
-                as: 'genreInfo'
-            }
-        },
-        { $unwind: '$genreInfo' },
-        {
-            $group: {
-                _id: '$genreInfo.name',
-                count: { $sum: 1 }
-            }
-        },
-        { $project: { name: '$_id', value: '$count', _id: 0 } },
-        { $sort: { value: -1 } },
-        { $limit: 5 } // Top 5 genres
-    ]);
-
-    // 2. User Growth (Last 6 Months) (for Bar/Area Chart)
     const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Go back 5 months to include current month (total 6)
-    sixMonthsAgo.setDate(1); // Start from beginning of that month
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
 
-    const usersByMonth = await User.aggregate([
-        { $match: { createdAt: { $gte: sixMonthsAgo } } },
-        {
-            $group: {
-                _id: {
-                    month: { $month: '$createdAt' },
-                    year: { $year: '$createdAt' }
-                },
-                count: { $sum: 1 }
-            }
-        },
-        {
-            $sort: { '_id.year': 1, '_id.month': 1 }
-        }
+    // 1. Run all counts and aggregations in parallel
+    const [totalUsers, activeBooks, pendingReviews, booksByGenre, usersByMonth] = await Promise.all([
+        User.countDocuments().lean(),
+        Book.countDocuments().lean(),
+        Review.countDocuments({ status: 'Pending' }).lean(),
+        Book.aggregate([
+            { $lookup: { from: 'genres', localField: 'genre', foreignField: '_id', as: 'genreInfo' } },
+            { $unwind: '$genreInfo' },
+            { $group: { _id: '$genreInfo.name', count: { $sum: 1 } } },
+            { $project: { name: '$_id', value: '$count', _id: 0 } },
+            { $sort: { value: -1 } },
+            { $limit: 5 }
+        ]),
+        User.aggregate([
+            { $match: { createdAt: { $gte: sixMonthsAgo } } },
+            { $group: { _id: { month: { $month: '$createdAt' }, year: { $year: '$createdAt' } }, count: { $sum: 1 } } },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ])
     ]);
+
+    const systemHealth = '98%';
 
     // Generate last 6 months array to ensure no gaps
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

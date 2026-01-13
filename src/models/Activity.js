@@ -23,6 +23,11 @@ const activitySchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Indexes for performance
+activitySchema.index({ user: 1, createdAt: -1 });
+activitySchema.index({ createdAt: -1 });
+activitySchema.index({ type: 1 });
+
 const Activity = mongoose.model('Activity', activitySchema);
 
 module.exports = Activity;

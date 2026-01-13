@@ -17,6 +17,7 @@ const favoriteSchema = new mongoose.Schema({
 
 // Prevent duplicate favorites (1 user can favorite 1 book only once)
 favoriteSchema.index({ user: 1, book: 1 }, { unique: true });
+favoriteSchema.index({ user: 1, createdAt: -1 });
 
 
 

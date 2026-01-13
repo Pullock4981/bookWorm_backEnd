@@ -64,25 +64,23 @@ const createActivity = async (userId, type, bookId, data = {}) => {
  * - Fetch followings -> Fetch activities -> Limit to 20-30 -> Skip if book deleted
  */
 const getActivityFeed = async (userId) => {
-    // 1. Get the list of users the logged-in user is following
-    const followings = await Follow.find({ follower: userId }).select('following');
+    // 1. Get followings - lean() and select()
+    const followings = await Follow.find({ follower: userId }).select('following').lean();
     const followingIds = followings.map(f => f.following);
 
     if (followingIds.length === 0) return [];
 
-    // 2. Fetch recent activities from those users only
+    // 2. Fetch activities with projection and lean
     const activities = await Activity.find({ user: { $in: followingIds } })
         .sort('-createdAt')
         .limit(30)
         .populate('user', 'name photo')
-        .populate('book', 'title coverImage');
+        .populate('book', 'title coverImage')
+        .lean();
 
-    // 3. Skip activities if the related book no longer exists (filtered by populate)
-    // 4. Return formatted feed
     return activities
-        .filter(act => act.book && act.user) // Filter out deleted books or users
+        .filter(act => act.book && act.user)
         .map(act => {
-            // Determine shelf for display
             let shelf = undefined;
             if (act.type === 'ADD_TO_READ') shelf = 'Read';
             if (act.type === 'FINISHED_BOOK') shelf = 'Read';
@@ -91,7 +89,7 @@ const getActivityFeed = async (userId) => {
                 id: act._id,
                 user: act.user,
                 book: act.book,
-                type: act.type === 'RATED_BOOK' ? 'review' : 'shelf_update', // Map to frontend types
+                type: act.type === 'RATED_BOOK' ? 'review' : 'shelf_update',
                 shelf: shelf,
                 rating: act.data?.rating,
                 timestamp: act.createdAt
@@ -99,32 +97,21 @@ const getActivityFeed = async (userId) => {
         });
 };
 
-/**
- * Suggests users to follow
- * Logic: Find users who are NOT followed by current user
- */
 const getSuggestedUsers = async (userId) => {
-    // 1. Get list of users already followed
-    const followings = await Follow.find({ follower: userId }).select('following');
+    const followings = await Follow.find({ follower: userId }).select('following').lean();
     const followingIds = followings.map(f => f.following);
-
-    // 2. Add current user to exclusion list
     followingIds.push(userId);
 
-    // 3. Find users NOT in this list
-    const suggestions = await User.find({ _id: { $nin: followingIds }, role: 'User' })
+    return await User.find({ _id: { $nin: followingIds }, role: 'User' })
         .limit(5)
-        .select('name photo role'); // Only needed fields
-
-    return suggestions;
+        .select('name photo role')
+        .lean();
 };
 
-/**
- * Fetches list of users the current user is following
- */
 const getFollowing = async (userId) => {
     const followings = await Follow.find({ follower: userId })
-        .populate('following', 'name photo role');
+        .populate('following', 'name photo role')
+        .lean();
 
     return followings.map(f => f.following);
 };
