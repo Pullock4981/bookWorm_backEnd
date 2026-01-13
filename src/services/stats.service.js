@@ -2,6 +2,8 @@ const Library = require('../models/Library');
 const Goal = require('../models/Goal');
 const Review = require('../models/Review');
 const Activity = require('../models/Activity');
+const User = require('../models/User');
+const Book = require('../models/Book');
 
 /**
  * Service to calculate and retrieve user reading statistics
@@ -46,7 +48,7 @@ const getUserStats = async (userId) => {
             if (lastDateString === today || lastDateString === yesterday) {
                 streak = 1;
                 for (let i = 1; i < sortedDays.length; i++) {
-                    const diff = (sortedDays[i - 1] - sortedDays[i]) / (1000 * 60 * 60 * 24);
+                    const diff = Math.round((sortedDays[i - 1] - sortedDays[i]) / (1000 * 60 * 60 * 24));
                     if (diff === 1) {
                         streak++;
                     } else {
@@ -78,7 +80,7 @@ const getUserStats = async (userId) => {
     const genreCounts = {};
     libraryItems.forEach(item => {
         if (item.book && item.book.genre) {
-            const genreName = item.book.genre.name;
+            const genreName = typeof item.book.genre === 'object' ? item.book.genre.name : 'Other';
             genreCounts[genreName] = (genreCounts[genreName] || 0) + 1;
         }
     });
@@ -136,9 +138,9 @@ const getAdminStats = async () => {
 
     // 1. Run all counts and aggregations in parallel
     const [totalUsers, activeBooks, pendingReviews, booksByGenre, usersByMonth] = await Promise.all([
-        User.countDocuments().lean(),
-        Book.countDocuments().lean(),
-        Review.countDocuments({ status: 'Pending' }).lean(),
+        User.countDocuments(),
+        Book.countDocuments(),
+        Review.countDocuments({ status: 'Pending' }),
         Book.aggregate([
             { $lookup: { from: 'genres', localField: 'genre', foreignField: '_id', as: 'genreInfo' } },
             { $unwind: '$genreInfo' },

@@ -28,7 +28,7 @@ const getAllBooks = async (filter = {}, options = {}) => {
             .limit(limit)
             .skip(skip)
             .lean(),
-        Book.countDocuments(filter).lean()
+        Book.countDocuments(filter)
     ]);
 
     return {
