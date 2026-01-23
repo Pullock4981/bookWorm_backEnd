@@ -97,10 +97,30 @@ const getFollowing = async (req, res) => {
     }
 };
 
+/**
+ * Handles user search request
+ */
+const searchUsers = async (req, res) => {
+    try {
+        const users = await socialService.searchUsers(req.query.q, req.user._id);
+        res.status(200).json({
+            status: 'success',
+            results: users.length,
+            data: users
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     followUser,
     unfollowUser,
     getFeed,
     getSuggestedUsers,
-    getFollowing
+    getFollowing,
+    searchUsers
 };

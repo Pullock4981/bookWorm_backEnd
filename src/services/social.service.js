@@ -116,11 +116,29 @@ const getFollowing = async (userId) => {
     return followings.map(f => f.following);
 };
 
+/**
+ * Searches for users by name or email
+ */
+const searchUsers = async (query, currentUserId) => {
+    return await User.find({
+        $and: [
+            { _id: { $ne: currentUserId } },
+            {
+                $or: [
+                    { name: { $regex: query, $options: 'i' } },
+                    { email: { $regex: query, $options: 'i' } }
+                ]
+            }
+        ]
+    }).select('name photo bio email').limit(10);
+};
+
 module.exports = {
     followUser,
     unfollowUser,
     createActivity,
     getActivityFeed,
     getSuggestedUsers,
-    getFollowing
+    getFollowing,
+    searchUsers
 };

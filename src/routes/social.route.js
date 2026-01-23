@@ -12,5 +12,6 @@ router.post('/unfollow/:id', socialController.unfollowUser);
 router.get('/feed', socialController.getFeed);
 router.get('/users-to-follow', socialController.getSuggestedUsers);
 router.get('/following', socialController.getFollowing);
+router.get('/search', socialController.searchUsers);
 
 module.exports = router;
