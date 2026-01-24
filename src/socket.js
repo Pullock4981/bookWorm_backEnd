@@ -55,11 +55,11 @@ const initializeSocket = (server) => {
 
         // Send a private message
         socket.on('send_message', async (data) => {
-            const { conversationId, text, recipientId } = data;
+            const { conversationId, text, recipientId, image } = data;
 
             try {
                 // Save to database
-                const message = await chatService.saveMessage(conversationId, userId, text);
+                const message = await chatService.saveMessage(conversationId, userId, text, image);
 
                 // Broadcast to the room (both users if joined)
                 io.to(conversationId).emit('receive_message', message);

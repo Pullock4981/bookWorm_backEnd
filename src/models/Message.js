@@ -14,8 +14,12 @@ const messageSchema = new mongoose.Schema(
         },
         text: {
             type: String,
-            required: true,
+            required: false, // Text is optional if image is present
             trim: true,
+        },
+        image: {
+            type: String, // URL of the image
+            default: null
         },
         isRead: {
             type: Boolean,

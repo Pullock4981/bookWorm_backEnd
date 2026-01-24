@@ -22,16 +22,17 @@ const getOrCreateConversation = async (userId1, userId2) => {
 /**
  * Save a new message to the database
  */
-const saveMessage = async (conversationId, senderId, text) => {
+const saveMessage = async (conversationId, senderId, text, image = null) => {
     const message = await Message.create({
         conversationId,
         senderId,
-        text
+        text: text || "", // Ensure text is string even if empty
+        image
     });
 
     // Update the conversation's last message and updatedAt timestamp
     await Conversation.findByIdAndUpdate(conversationId, {
-        lastMessage: text,
+        lastMessage: text || 'Sent an image',
         updatedAt: Date.now()
     });
 

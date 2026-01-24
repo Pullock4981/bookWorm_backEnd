@@ -1,4 +1,16 @@
 const chatService = require('../services/chat.service');
+const catchAsync = require('../utils/catchAsync');
+
+const uploadImage = catchAsync(async (req, res) => {
+    if (!req.file) {
+        throw new Error('Please upload an image');
+    }
+    // Cloudinary storage returns path/url in req.file.path
+    res.status(200).json({
+        status: 'success',
+        url: req.file.path
+    });
+});
 
 /**
  * Get all conversations for the logged-in user
@@ -80,5 +92,6 @@ module.exports = {
     startConversation,
     getMessages,
     getUnreadCount,
-    markAsRead
+    markAsRead,
+    uploadImage
 };
