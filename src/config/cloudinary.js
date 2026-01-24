@@ -25,13 +25,14 @@ const storage = new CloudinaryStorage({
             folder = 'bookworm/covers';
         } else if (file.mimetype === 'application/pdf') {
             folder = 'bookworm/books';
-            resource_type = 'raw'; // PDF needs 'raw' or 'auto' depends on Cloudinary version, 'raw' is safer for non-image files
+            resource_type = 'raw';
         }
 
         return {
             folder: folder,
             resource_type: resource_type,
-            public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
+            public_id: `${Date.now()}-${file.originalname.split('.')[0]}`,
+            transformation: [{ width: 1000, crop: "limit", quality: "auto", fetch_format: "auto" }]
         };
     },
 });
