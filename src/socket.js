@@ -9,7 +9,8 @@ const initializeSocket = (server) => {
             origin: [
                 process.env.CLIENT_URL,
                 'http://localhost:3000',
-                'http://localhost:5001'
+                'http://localhost:5001',
+                'https://book-worm-front-end.vercel.app'
             ],
             credentials: true
         }
