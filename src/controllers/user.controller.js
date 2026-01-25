@@ -60,8 +60,58 @@ const deleteUser = async (req, res) => {
     }
 };
 
+/**
+ * Updates the current logged-in user's profile
+ */
+const updateMe = async (req, res) => {
+    try {
+        // 1) Create error if user POSTs password data
+        if (req.body.password || req.body.passwordConfirm) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'This route is not for password updates. Please use /updateMyPassword.'
+            });
+        }
+
+        // 2) Filtered out unwanted fields names that are not allowed to be updated
+        // Allowed: name, phone, location
+        // Images handled via req.files
+        const filteredBody = {};
+        const allowedFields = ['name', 'phone', 'location'];
+
+        Object.keys(req.body).forEach(el => {
+            if (allowedFields.includes(el)) filteredBody[el] = req.body[el];
+        });
+
+        // 3) Handle Files (Cloudinary)
+        if (req.files) {
+            if (req.files.photo) {
+                filteredBody.photo = req.files.photo[0].path;
+            }
+            if (req.files.coverPhoto) {
+                filteredBody.coverPhoto = req.files.coverPhoto[0].path;
+            }
+        }
+
+        // 4) Update User
+        const updatedUser = await userService.updateUserProfile(req.user.id, filteredBody);
+
+        res.status(200).json({
+            status: 'success',
+            data: updatedUser
+        });
+
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
-    deleteUser
+    deleteUser,
+    updateMe
 };

@@ -29,6 +29,20 @@ const userSchema = new mongoose.Schema({
         enum: ['User', 'Admin'],
         default: 'User'
     },
+    coverPhoto: {
+        type: String,
+        default: null
+    },
+    phone: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    location: {
+        type: String,
+        trim: true,
+        default: ''
+    },
 }, {
     timestamps: true
 });

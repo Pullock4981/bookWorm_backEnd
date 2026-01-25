@@ -47,7 +47,7 @@ const tutorialRoutes = require('./routes/tutorial.route');
 app.use('/api/auth', authRoutes);
 app.use('/api/genres', genreRoutes);
 app.use('/api/books', bookRoutes);
-app.use('/api/admin/users', userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/recommendations', recommendationRoutes);

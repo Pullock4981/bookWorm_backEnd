@@ -19,57 +19,21 @@ const getPersonalizedRecommendations = async (userId) => {
         .map(item => item.book?.toString())
         .filter(id => id && mongoose.Types.ObjectId.isValid(id));
 
-    // 2. Analyze user preferences from "Read" and "Currently Reading"
+    // 2. Analyze user preferences from ALL shelves (Read, Reading, Want to Read)
+    // This captures intent even if they haven't started reading yet.
     const preferredBooks = userLibrary.filter(item =>
-        ['Read', 'Currently Reading'].includes(item.shelf)
+        ['Read', 'Currently Reading', 'Want to Read'].includes(item.shelf)
     );
 
-    // --- CASE A: FALLBACK / NEW USER (< 3 preferred books) ---
-    if (preferredBooks.length < 3) {
-        const [popularBooks, randomBooks] = await Promise.all([
-            Book.find({ _id: { $nin: allAddedBookIds } })
-                .sort({ averageRating: -1, totalReviews: -1 })
-                .limit(12)
-                .select('title author coverImage genre averageRating totalReviews')
-                .populate('genre', 'name')
-                .lean(),
-            Book.aggregate([
-                { $match: { _id: { $nin: allAddedBookIds.map(id => new mongoose.Types.ObjectId(id)) } } },
-                { $sample: { size: 6 } },
-                { $lookup: { from: 'genres', localField: 'genre', foreignField: '_id', as: 'genre' } },
-                { $unwind: '$genre' },
-                { $project: { title: 1, author: 1, coverImage: 1, 'genre.name': 1, averageRating: 1, totalReviews: 1 } }
-            ])
-        ]);
-
-        const merged = [
-            ...popularBooks.map(b => ({
-                ...b,
-                recommendationReason: "Highly rated by the community"
-            })),
-            ...randomBooks.map(b => ({
-                ...b,
-                recommendationReason: "A fresh discovery for you"
-            }))
-        ];
-
-        // Unique filter (just in case)
-        const unique = [];
-        const seen = new Set();
-        for (const item of merged) {
-            const idStr = item._id.toString();
-            if (!seen.has(idStr)) {
-                seen.add(idStr);
-                unique.push(item);
-            }
-        }
-
-        return unique.slice(0, 18);
+    // --- CASE A: FALLBACK / NEW USER (< 1 preferred book) ---
+    // User Request: "jodi favourite e kunu genra na thake taile oi genra er book show koiro nah"
+    // Meaning: If no data, show NOTHING. Let the frontend show "Analyzing..." state.
+    if (preferredBooks.length < 1) {
+        return [];
     }
 
-    // --- CASE B: PERSONALIZED (>= 3 preferred books) ---
-    // Extract genre IDs from preferred books (need to populate if not already there, 
-    // but we can query them efficiently)
+    // --- CASE B: PERSONALIZED (>= 1 preferred book) ---
+    // Extract genre IDs from preferred books
     const preferredBookIds = preferredBooks.map(p => p.book);
     const populatedPreferred = await Book.find({ _id: { $in: preferredBookIds } })
         .select('genre')
@@ -81,59 +45,69 @@ const getPersonalizedRecommendations = async (userId) => {
         if (!book.genre) return;
         const gId = book.genre._id.toString();
         if (!genreStats[gId]) {
-            genreStats[gId] = { name: book.genre.name, count: 0 };
+            genreStats[gId] = { name: book.genre.name, count: 0, id: gId };
         }
         genreStats[gId].count += 1;
     });
 
-    const topGenres = Object.entries(genreStats)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 3);
+    // Sort genres by frequency (most read first)
+    const sortedGenres = Object.values(genreStats).sort((a, b) => b.count - a.count);
 
-    const targetGenreIds = topGenres.map(([id]) => id);
+    if (sortedGenres.length === 0) return []; // Should not happen based on check above
 
-    const recommendedBooks = await Book.find({
-        genre: { $in: targetGenreIds },
-        _id: { $nin: allAddedBookIds },
-        averageRating: { $gte: 3.0 }
+    const topGenre = sortedGenres[0]; // The winner
+
+    // Strategy: Fetch books from Top Genre FIRST.
+    // We want to fill the view (approx 8-10 books) with the User's #1 fav genre if possible.
+
+    let recommendations = [];
+    const booksNeeded = 18; // Fetch buffer
+
+    // 1. Fetch Top Genre Books
+    const topGenreBooks = await Book.find({
+        genre: topGenre.id,
+        _id: { $nin: allAddedBookIds }
     })
         .sort({ averageRating: -1, totalReviews: -1 })
-        .limit(18)
+        .limit(booksNeeded)
         .select('title author coverImage genre averageRating totalReviews')
         .populate('genre', 'name')
         .lean();
 
-    const personalized = recommendedBooks.map(book => {
-        const genreId = book.genre._id.toString();
-        const stat = genreStats[genreId];
-        return {
-            ...book,
-            recommendationReason: stat
-                ? `Matches your preference for ${stat.name} (${stat.count} books read)`
-                : "A top choice in a genre you enjoy"
-        };
-    });
+    recommendations = topGenreBooks.map(b => ({
+        ...b,
+        recommendationReason: `Because you read ${topGenre.count} ${topGenre.name} books`
+    }));
 
-    if (personalized.length < 12) {
-        const currentIds = personalized.map(b => b._id.toString());
-        const extraPicks = await Book.find({
-            _id: { $nin: [...allAddedBookIds, ...currentIds] }
+    // 2. If we still need more books, try secondary genres
+    // STRICT MODE: Only fetch from genres user has actually read/interacted with.
+    if (recommendations.length < booksNeeded && sortedGenres.length > 1) {
+        const remainingSpace = booksNeeded - recommendations.length;
+        // Take next best genres (up to 3 more to avoid noise)
+        const secondaryGenreIds = sortedGenres.slice(1, 4).map(g => g.id);
+        const existingIds = [...allAddedBookIds, ...recommendations.map(b => b._id)];
+
+        const secondaryBooks = await Book.find({
+            genre: { $in: secondaryGenreIds },
+            _id: { $nin: existingIds }
         })
             .sort({ averageRating: -1, totalReviews: -1 })
-            .limit(18 - personalized.length)
+            .limit(remainingSpace)
             .select('title author coverImage genre averageRating totalReviews')
             .populate('genre', 'name')
             .lean();
 
-        const supplemental = extraPicks.map(b => ({
+        recommendations = [...recommendations, ...secondaryBooks.map(b => ({
             ...b,
-            recommendationReason: "A community-approved popular pick"
-        }));
-
-        return [...personalized, ...supplemental].slice(0, 18);
+            recommendationReason: "From other genres you enjoy"
+        }))];
     }
 
-    return personalized.slice(0, 18);
+    // 3. NO FALLBACK TO RANDOM POPULAR BOOKS.
+    // As per user request: "jodi favourite e kunu genra na thake taile oi genra er book show koiro nah"
+    // We only return what matches their history. If it's short (e.g. 2 books), so be it.
+
+    return recommendations.slice(0, 18);
 };
 
 module.exports = {

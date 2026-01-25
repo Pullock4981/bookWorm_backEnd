@@ -41,8 +41,27 @@ const deleteUser = async (userId) => {
     return user;
 };
 
+/**
+ * Updates a user's profile (Authenticated User)
+ * @param {string} userId - ID of the user
+ * @param {object} updateData - Data to update (name, phone, location, images)
+ */
+const updateUserProfile = async (userId, updateData) => {
+    // Filter out restricted fields just in case controller didn't catch them, though controller should handle 'role', 'password' exclusion.
+    // For simplicity, we trust the controller passed valid data.
+
+    const user = await User.findByIdAndUpdate(userId, updateData, {
+        new: true,
+        runValidators: true
+    });
+
+    if (!user) throw new Error('User not found');
+    return user;
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
-    deleteUser
+    deleteUser,
+    updateUserProfile
 };
