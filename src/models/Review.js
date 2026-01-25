@@ -29,12 +29,41 @@ const reviewSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Approved'],
         default: 'Pending'
+    },
+    likes: {
+        type: [
+            {
+                type: mongoose.Schema.ObjectId,
+                ref: 'User'
+            }
+        ],
+        default: []
+    },
+    comments: {
+        type: [
+            {
+                user: {
+                    type: mongoose.Schema.ObjectId,
+                    ref: 'User'
+                },
+                text: {
+                    type: String,
+                    required: true
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
+        default: []
     }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
 });
+
 
 // Allow multiple reviews: A user can review a book multiple times if they wish.
 reviewSchema.index({ book: 1, user: 1 }, { unique: false });

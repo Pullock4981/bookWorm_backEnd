@@ -1,6 +1,7 @@
 const Follow = require('../models/Follow');
 const Activity = require('../models/Activity');
 const User = require('../models/User');
+const Review = require('../models/Review');
 
 /**
  * Business Rule: A user can follow another user
@@ -45,13 +46,14 @@ const unfollowUser = async (followerId, followingId) => {
 /**
  * Internal helper to track meaningful user activities
  */
-const createActivity = async (userId, type, bookId, data = {}) => {
+const createActivity = async (userId, type, bookId, data = {}, reviewId = null) => {
     try {
         await Activity.create({
             user: userId,
             type,
             book: bookId,
-            data
+            data,
+            review: reviewId
         });
     } catch (err) {
         console.error('Activity creation failed:', err.message);
@@ -76,7 +78,13 @@ const getActivityFeed = async (userId) => {
         .limit(30)
         .populate('user', 'name photo')
         .populate('book', 'title coverImage')
-        .lean();
+        .populate('review')
+        .populate('comments.user', 'name photo')
+        .populate({
+            path: 'review',
+            populate: { path: 'comments.user', select: 'name photo' }
+        });
+
 
     return activities
         .filter(act => act.book && act.user)
@@ -85,6 +93,10 @@ const getActivityFeed = async (userId) => {
             if (act.type === 'ADD_TO_READ') shelf = 'Read';
             if (act.type === 'FINISHED_BOOK') shelf = 'Read';
 
+            // Use Review data if available for interaction counts/lists
+            const likes = (act.review && act.type === 'RATED_BOOK') ? act.review.likes : (act.likes || []);
+            const comments = (act.review && act.type === 'RATED_BOOK') ? act.review.comments : (act.comments || []);
+
             return {
                 id: act._id,
                 user: act.user,
@@ -92,7 +104,52 @@ const getActivityFeed = async (userId) => {
                 type: act.type === 'RATED_BOOK' ? 'review' : 'shelf_update',
                 shelf: shelf,
                 rating: act.data?.rating,
-                timestamp: act.createdAt
+                review: act.data?.review,
+                timestamp: act.createdAt,
+                likes: likes,
+                comments: comments
+            };
+        });
+};
+
+/**
+ * Fetch a specific user's activity log for their profile
+ */
+const getUserActivity = async (targetUserId) => {
+    const activities = await Activity.find({ user: targetUserId })
+        .sort('-createdAt')
+        .limit(10)
+        .populate('user', 'name photo')
+        .populate('book', 'title coverImage')
+        .populate({
+            path: 'review',
+            populate: { path: 'comments.user', select: 'name photo' }
+        })
+        .populate('comments.user', 'name photo');
+
+
+    return activities
+        .filter(act => act.book) // Only show if book exists
+        .map(act => {
+            let shelf = undefined;
+            if (act.type === 'ADD_TO_READ') shelf = 'Read';
+            if (act.type === 'FINISHED_BOOK') shelf = 'Read';
+
+            // Use Review data if available
+            const likes = (act.review && act.type === 'RATED_BOOK') ? act.review.likes : (act.likes || []);
+            const comments = (act.review && act.type === 'RATED_BOOK') ? act.review.comments : (act.comments || []);
+
+            return {
+                id: act._id,
+                user: act.user,
+                book: act.book,
+                type: act.type === 'RATED_BOOK' ? 'review' : 'shelf_update',
+                shelf: shelf,
+                rating: act.data?.rating,
+                review: act.data?.review,
+                timestamp: act.createdAt,
+                likes: likes,
+                comments: comments
             };
         });
 };
@@ -103,7 +160,6 @@ const getSuggestedUsers = async (userId) => {
     followingIds.push(userId);
 
     return await User.find({ _id: { $nin: followingIds }, role: 'User' })
-        .limit(5)
         .select('name photo role')
         .lean();
 };
@@ -133,12 +189,66 @@ const searchUsers = async (query, currentUserId) => {
     }).select('name photo bio email').limit(10);
 };
 
+const toggleLike = async (activityId, userId) => {
+    const activity = await Activity.findById(activityId);
+    if (!activity) throw new Error('Activity not found');
+
+    // If linked to a review, apply like to the review instead
+    if (activity.review && activity.type === 'RATED_BOOK') {
+        const review = await Review.findById(activity.review);
+        if (review) {
+            const isLiked = review.likes.includes(userId);
+            if (isLiked) {
+                review.likes = review.likes.filter(id => id.toString() !== userId.toString());
+            } else {
+                review.likes.push(userId);
+            }
+            await review.save();
+            return { ...activity.toObject(), likes: review.likes };
+        }
+    }
+
+    const isLiked = activity.likes.includes(userId);
+    if (isLiked) {
+        activity.likes = activity.likes.filter(id => id.toString() !== userId.toString());
+    } else {
+        activity.likes.push(userId);
+    }
+    await activity.save();
+    return activity;
+};
+
+const addComment = async (activityId, userId, text) => {
+    const activity = await Activity.findById(activityId);
+    if (!activity) throw new Error('Activity not found');
+
+    // If linked to a review, apply comment to the review instead
+    if (activity.review && activity.type === 'RATED_BOOK') {
+        const review = await Review.findById(activity.review);
+        if (review) {
+            review.comments.push({ user: userId, text });
+            await review.save();
+            const populatedReview = await review.populate('comments.user', 'name photo');
+            return { ...activity.toObject(), comments: populatedReview.comments };
+        }
+    }
+
+    activity.comments.push({ user: userId, text });
+    await activity.save();
+
+    // Return populated activity to show new comment immediately
+    return await activity.populate('comments.user', 'name photo');
+};
+
 module.exports = {
     followUser,
     unfollowUser,
     createActivity,
     getActivityFeed,
+    getUserActivity,
     getSuggestedUsers,
     getFollowing,
-    searchUsers
+    searchUsers,
+    toggleLike,
+    addComment
 };

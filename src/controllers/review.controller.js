@@ -104,10 +104,45 @@ const getBookReviews = async (req, res) => {
     }
 };
 
+const toggleLike = async (req, res) => {
+    try {
+        const review = await reviewService.toggleLike(req.params.id, req.user._id);
+        res.status(200).json({
+            status: 'success',
+            data: review
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
+const addComment = async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) throw new Error('Comment text is required');
+
+        const review = await reviewService.addComment(req.params.id, req.user._id, text);
+        res.status(200).json({
+            status: 'success',
+            data: review
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     createReview,
     getPendingReviews,
     approveReview,
     deleteReview,
-    getBookReviews
+    getBookReviews,
+    toggleLike,
+    addComment
 };

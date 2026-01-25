@@ -59,9 +59,20 @@ const updateUserProfile = async (userId, updateData) => {
     return user;
 };
 
+/**
+ * Get user by ID (Public Profile)
+ * @param {string} userId
+ */
+const getUserById = async (userId) => {
+    const user = await User.findById(userId).select('-password -__v -role'); // Exclude sensitive info
+    if (!user) throw new Error('User not found');
+    return user;
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
     deleteUser,
-    updateUserProfile
+    updateUserProfile,
+    getUserById
 };

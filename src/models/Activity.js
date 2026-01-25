@@ -18,6 +18,40 @@ const activitySchema = new mongoose.Schema({
     },
     data: {
         type: mongoose.Schema.Types.Mixed // For extra info like rating value
+    },
+    review: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Review'
+    },
+    likes: {
+        type: [
+            {
+                type: mongoose.Schema.ObjectId,
+                ref: 'User'
+            }
+        ],
+        default: []
+    },
+    comments: {
+        type: [
+            {
+                user: {
+                    type: mongoose.Schema.ObjectId,
+                    ref: 'User',
+                    required: true
+                },
+                text: {
+                    type: String,
+                    required: true,
+                    trim: true
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
+        default: []
     }
 }, {
     timestamps: true

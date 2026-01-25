@@ -19,5 +19,6 @@ router.patch('/me',
 router.get('/', protect, restrictTo('Admin'), userController.getAllUsers);
 router.patch('/:id/role', protect, restrictTo('Admin'), userController.updateUserRole);
 router.delete('/:id', protect, restrictTo('Admin'), userController.deleteUser);
+router.get('/:id', protect, userController.getUserById);
 
 module.exports = router;

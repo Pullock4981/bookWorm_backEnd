@@ -36,7 +36,7 @@ const approveReview = async (id) => {
     if (!review) throw new Error('Review not found');
 
     // Track Activity: User rates a book (only after review is approved)
-    await socialService.createActivity(review.user, 'RATED_BOOK', review.book, { rating: review.rating });
+    await socialService.createActivity(review.user, 'RATED_BOOK', review.book, { rating: review.rating, review: review.review }, review._id);
 
     return review;
 };
@@ -57,8 +57,33 @@ const deleteReview = async (id) => {
  */
 const getBookReviews = async (bookId) => {
     return await Review.find({ book: bookId, status: 'Approved' })
+        .sort('-createdAt')
         .populate('user', 'name photo')
-        .lean();
+        .populate('comments.user', 'name photo');
+};
+
+const toggleLike = async (reviewId, userId) => {
+    const review = await Review.findById(reviewId);
+    if (!review) throw new Error('Review not found');
+
+    const isLiked = review.likes.includes(userId);
+    if (isLiked) {
+        review.likes = review.likes.filter(id => id.toString() !== userId.toString());
+    } else {
+        review.likes.push(userId);
+    }
+    await review.save();
+    return review;
+};
+
+const addComment = async (reviewId, userId, text) => {
+    const review = await Review.findById(reviewId);
+    if (!review) throw new Error('Review not found');
+
+    review.comments.push({ user: userId, text });
+    await review.save();
+
+    return await review.populate('comments.user', 'name photo');
 };
 
 module.exports = {
@@ -66,5 +91,7 @@ module.exports = {
     getPendingReviews,
     approveReview,
     deleteReview,
-    getBookReviews
+    getBookReviews,
+    toggleLike,
+    addComment
 };

@@ -109,9 +109,28 @@ const updateMe = async (req, res) => {
     }
 };
 
+/**
+ * Get public profile logic
+ */
+const getUserById = async (req, res) => {
+    try {
+        const user = await userService.getUserById(req.params.id);
+        res.status(200).json({
+            status: 'success',
+            data: user
+        });
+    } catch (error) {
+        res.status(404).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     updateUserRole,
     deleteUser,
-    updateMe
+    updateMe,
+    getUserById
 };

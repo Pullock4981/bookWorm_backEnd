@@ -11,6 +11,8 @@ const router = express.Router();
  */
 router.post('/', protect, validate(createReviewSchema), reviewController.createReview);
 router.get('/book/:bookId', reviewController.getBookReviews);
+router.post('/:id/like', protect, reviewController.toggleLike);
+router.post('/:id/comment', protect, reviewController.addComment);
 
 /**
  * Admin Only Routes: Moderation

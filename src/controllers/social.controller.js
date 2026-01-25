@@ -59,6 +59,54 @@ const getFeed = async (req, res) => {
     }
 };
 
+const toggleLike = async (req, res) => {
+    try {
+        const activity = await socialService.toggleLike(req.params.id, req.user._id);
+        res.status(200).json({
+            status: 'success',
+            data: {
+                likes: activity.likes
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ status: 'fail', message: error.message });
+    }
+};
+
+const addComment = async (req, res) => {
+    try {
+        if (!req.body.text) throw new Error('Comment text required');
+        const activity = await socialService.addComment(req.params.id, req.user._id, req.body.text);
+        res.status(200).json({
+            status: 'success',
+            data: {
+                comments: activity.comments
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ status: 'fail', message: error.message });
+    }
+};
+
+/**
+ * Fetches the social activity feed for a specific user (profile view)
+ */
+const getUserActivity = async (req, res) => {
+    try {
+        const activities = await socialService.getUserActivity(req.params.userId || req.user._id);
+        res.status(200).json({
+            status: 'success',
+            results: activities.length,
+            data: activities
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message
+        });
+    }
+};
+
 /**
  * Fetches users to follow
  */
@@ -117,10 +165,14 @@ const searchUsers = async (req, res) => {
 };
 
 module.exports = {
+
     followUser,
     unfollowUser,
     getFeed,
+    getUserActivity,
     getSuggestedUsers,
     getFollowing,
-    searchUsers
+    searchUsers,
+    toggleLike,
+    addComment
 };

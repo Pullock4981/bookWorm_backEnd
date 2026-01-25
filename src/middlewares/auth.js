@@ -42,6 +42,7 @@ const protect = async (req, res, next) => {
         req.user = currentUser;
         next();
     } catch (error) {
+        console.error('Auth Protection Failed:', error.message);
         res.status(401).json({
             status: 'fail',
             message: 'Invalid token or token expired'
